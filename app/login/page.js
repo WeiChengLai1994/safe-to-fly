@@ -19,6 +19,14 @@ export default function LoginPage() {
         backgroundImage: "url('/image/shaun-darwood-TC6u_HnDDqs-unsplash.jpg')", // 設置與首頁相同的背景圖像
       }}
     >
+      {/* 添加 logo */}
+      <div className="absolute top-4 left-4">
+        <img
+            src="/image/Untitled design.png"
+            alt="Logo"
+            className="h-36 w-auto object-contain"
+          />
+      </div>
       <form
         className="bg-white p-6 rounded shadow-lg w-96"
         onSubmit={handleLogin}
@@ -50,7 +58,7 @@ export default function LoginPage() {
           Log in
         </button>
 
-        <div className="relative mt-4 text-center z-10 bg-transparent">
+        <div className="text-black relative mt-4 text-center z-10 bg-transparent">
           <span>No Account? </span>
           <a
             href="/register"

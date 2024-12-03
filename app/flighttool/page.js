@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { AlertCircle, Sun, Wind, CloudRain, Eye } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { AlertCircle, Sun, Wind, CloudRain, Eye } from "lucide-react";
+import debounce from "lodash.debounce";
 
 const AlbertaAirportWeather = () => {
   const [airport, setAirport] = useState("");
@@ -9,6 +10,7 @@ const AlbertaAirportWeather = () => {
   const [canFly, setCanFly] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isClient, setIsClient] = useState(false); // 用來追蹤是否在客戶端渲染
 
   // Detailed list of Alberta airports
   const airports = [
@@ -30,72 +32,91 @@ const AlbertaAirportWeather = () => {
     setError(null);
 
     try {
-    // 替換 YOUR_API_KEY 為你實際的 API 金鑰
-    const response = await fetch(`https://avwx.rest/api/metar/${airport}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': 'Bearer 5XhNVz4nzF1urpLl9PPHkJLvDTGEyoqpX0lMZQHz7Do', // 重要：加入 API 金鑰
-        'Accept': 'application/json'
+      const response = await fetch(
+        `https://avwx.rest/api/metar/${airport}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_AVWX_API_KEY}`,
+            Accept: "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        const message = `Error ${response.status}: ${errorText}`;
+        setError(message);
+        throw new Error(message);
       }
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`HTTP Error: ${response.status}`);
-      console.error(`Error Details: ${errorText}`);
-      throw new Error('Unable to retrieve weather data');
-    }
 
-    const data = await response.json();
+      const data = await response.json();
 
-
-      // 解析天氣資料
+      // Parse weather data
       const processedWeather = {
-        rawMetar: data.raw,
-        temperature: data.temperature?.value || null,
-        windDirection: data.wind_direction?.value || null,
-        windSpeed: data.wind_speed?.value || null,
-        gustSpeed: data.wind_gust?.value || null,
-        visibility: data.visibility?.value || null,
-        cloudCover: data.clouds ? data.clouds[0]?.type : null
+        rawMetar: data.raw || "N/A",
+        temperature: data.temperature?.value ?? "N/A",
+        windDirection: data.wind_direction?.value ?? "N/A",
+        windSpeed: data.wind_speed?.value ?? "N/A",
+        gustSpeed: data.wind_gust?.value ?? "N/A",
+        visibility: data.visibility?.value ?? "N/A",
+        cloudCover: data.clouds ? data.clouds[0]?.type || "N/A" : "N/A",
       };
 
       setWeatherData(processedWeather);
 
-      // 飛行條件評估
-      const flyConditions = 
-        processedWeather.windSpeed <= 35 && 
-        processedWeather.visibility >= 5 && 
-        processedWeather.cloudCover !== 'OVC';
+      // Evaluate flight conditions
+      const flyConditions =
+        processedWeather.windSpeed <= 35 &&
+        processedWeather.visibility >= 5 &&
+        processedWeather.cloudCover !== "OVC";
 
       setCanFly(flyConditions);
       setLoading(false);
-
     } catch (err) {
       setError(err.message);
       setLoading(false);
     }
   };
 
+  // Debounced function to limit request frequency
+  const debouncedFetchWeatherData = debounce(fetchWeatherData, 500);
+
   useEffect(() => {
+    setIsClient(true); // 設定為true，表示客戶端渲染完成
     if (airport) {
-      fetchWeatherData();
+      debouncedFetchWeatherData();
     }
   }, [airport]);
 
+  if (!isClient) return null; // 客戶端渲染前不渲染組件
+
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
+    <div
+      className="min-h-screen flex items-center justify-center bg-cover bg-center"
+      style={{
+        backgroundImage: "url('/image/shaun-darwood-TC6u_HnDDqs-unsplash.jpg')",
+      }}
+    >
       <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg p-6">
         <h2 className="text-2xl font-bold mb-6 text-center text-blue-600">
           Alberta Airport Weather Forecast System
         </h2>
+        {/* Logo Section */}
+        <div className="absolute top-4 left-4">
+          <img
+            src="/image/Untitled design.png"
+            alt="Logo"
+            className="h-36 w-auto object-contain"
+          />
+        </div>
 
         <div className="grid md:grid-cols-2 gap-6">
           <div className="space-y-4">
             <select
               value={airport}
               onChange={(e) => setAirport(e.target.value)}
-              className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-black"
             >
               <option value="">Select Airport</option>
               {airports.map((airportInfo) => (
@@ -106,7 +127,7 @@ const AlbertaAirportWeather = () => {
             </select>
           </div>
 
-          <div className="bg-gray-50 p-4 rounded-md">
+          <div className="bg-gray-100 p-4 rounded-md text-black">
             {error && (
               <div className="flex items-center text-red-500 mb-4">
                 <AlertCircle className="mr-2" />
@@ -129,9 +150,11 @@ const AlbertaAirportWeather = () => {
                 <div className="flex items-center">
                   <Wind className="mr-2 text-green-500" />
                   <span>
-                    Wind Direction: {weatherData.windDirection}° 
-                    Wind Speed: {weatherData.windSpeed} knots
-                    {weatherData.gustSpeed ? `(Gusts: ${weatherData.gustSpeed} knots)` : ''}
+                    Wind Direction: {weatherData.windDirection}° Wind Speed:{" "}
+                    {weatherData.windSpeed} knots{" "}
+                    {weatherData.gustSpeed
+                      ? `(Gusts: ${weatherData.gustSpeed} knots)`
+                      : ""}
                   </span>
                 </div>
                 <div className="flex items-center">
@@ -143,10 +166,16 @@ const AlbertaAirportWeather = () => {
                   <span>Cloud Cover: {weatherData.cloudCover}</span>
                 </div>
 
-                <div className={`mt-4 p-3 rounded-md ${canFly ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                  {canFly 
-                    ? 'Flight conditions are good, ready for takeoff' 
-                    : 'Flight conditions are unfavorable, recommend postponing'}
+                <div
+                  className={`mt-4 p-3 rounded-md ${
+                    canFly
+                      ? "bg-green-100 text-green-800"
+                      : "bg-red-100 text-red-800"
+                  }`}
+                >
+                  {canFly
+                    ? "Flight conditions are good, ready for takeoff"
+                    : "Flight conditions are unfavorable, recommend postponing"}
                 </div>
 
                 <div className="text-sm text-gray-500 mt-2">
