@@ -7,11 +7,6 @@
       "env": {
         "NEXT_PUBLIC_AVWX_API_KEY": "5XhNVz4nzF1urpLl9PPHkJLvDTGEyoqpX0lMZQHz7Do"
       }
-    },
-    "dev": {
-      "env": {
-        "NEXT_PUBLIC_AVWX_API_KEY": "5XhNVz4nzF1urpLl9PPHkJLvDTGEyoqpX0lMZQHz7Do"
-      }
     }
   }
   
