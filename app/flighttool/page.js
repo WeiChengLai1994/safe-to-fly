@@ -1,7 +1,15 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { AlertCircle, Sun, Wind, CloudRain, Eye } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  AlertCircle,
+  Sun,
+  Wind,
+  CloudRain,
+  Eye,
+  Menu,
+  X,
+} from "lucide-react";
 import debounce from "lodash.debounce";
 
 const AlbertaAirportWeather = () => {
@@ -10,9 +18,10 @@ const AlbertaAirportWeather = () => {
   const [canFly, setCanFly] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [isClient, setIsClient] = useState(false); // 用來追蹤是否在客戶端渲染
+  const [isClient, setIsClient] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false); // 控制菜單開關
+  const menuRef = useRef(null); // 用於追蹤菜單 DOM 節點
 
-  // Detailed list of Alberta airports
   const airports = [
     { code: "YYC", name: "Calgary International Airport" },
     { code: "YEG", name: "Edmonton International Airport" },
@@ -52,7 +61,6 @@ const AlbertaAirportWeather = () => {
 
       const data = await response.json();
 
-      // Parse weather data
       const processedWeather = {
         rawMetar: data.raw || "N/A",
         temperature: data.temperature?.value ?? "N/A",
@@ -65,7 +73,6 @@ const AlbertaAirportWeather = () => {
 
       setWeatherData(processedWeather);
 
-      // Evaluate flight conditions
       const flyConditions =
         processedWeather.windSpeed <= 35 &&
         processedWeather.visibility >= 5 &&
@@ -79,17 +86,33 @@ const AlbertaAirportWeather = () => {
     }
   };
 
-  // Debounced function to limit request frequency
   const debouncedFetchWeatherData = debounce(fetchWeatherData, 500);
 
   useEffect(() => {
-    setIsClient(true); // 設定為true，表示客戶端渲染完成
+    setIsClient(true);
     if (airport) {
       debouncedFetchWeatherData();
     }
   }, [airport]);
 
-  if (!isClient) return null; // 客戶端渲染前不渲染組件
+  // 點擊畫面其他區域時關閉菜單
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isMenuOpen]);
+
+  if (!isClient) return null;
 
   return (
     <div
@@ -98,11 +121,49 @@ const AlbertaAirportWeather = () => {
         backgroundImage: "url('/image/shaun-darwood-TC6u_HnDDqs-unsplash.jpg')",
       }}
     >
+      {/* Hamburger Menu */}
+      <div className="absolute top-4 right-4">
+        <button
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          className="p-2 rounded-full bg-blue-600 text-white focus:outline-none"
+        >
+          {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      </div>
+
+      {/* Sliding Menu */}
+      {isMenuOpen && (
+        <div
+          ref={menuRef}
+          className="fixed top-0 right-0 w-64 h-full bg-white shadow-lg p-6 z-50"
+        >
+          <ul className="space-y-4 text-black">
+            <li>
+              <a href="#pilot-profile" className="text-blue-600 hover:underline">
+                Pilot Profile
+              </a>
+            </li>
+            <li>
+              <a href="#flight-log" className="text-blue-600 hover:underline">
+                Flight Log
+              </a>
+            </li>
+            <li>
+              <button
+                onClick={() => alert("Logging out...")}
+                className="text-red-600 hover:underline"
+              >
+                Log Out
+              </button>
+            </li>
+          </ul>
+        </div>
+      )}
+
       <div className="max-w-4xl mx-auto bg-white shadow-lg rounded-lg p-6">
         <h2 className="text-2xl font-bold mb-6 text-center text-blue-600">
           Alberta Airport Weather Forecast System
         </h2>
-        {/* Logo Section */}
         <div className="absolute top-4 left-4">
           <img
             src="/image/Untitled design.png"
